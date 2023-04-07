@@ -2,12 +2,13 @@ use std::ops::Add;
 
 use chrono::{Duration, Months, Utc};
 use rsa::pkcs1v15::SigningKey;
-use rsa::signature::{SignatureEncoding, Signer};
 use rsa::RsaPrivateKey;
+use rsa::signature::{SignatureEncoding, Signer};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::Sha256;
 use uuid::Uuid;
+
 use crate::errors::jwt_error::JwtError;
 use crate::models::jwt::jwt_claims::JwtClaims;
 use crate::models::jwt::jwt_headers::JwtHeader;
