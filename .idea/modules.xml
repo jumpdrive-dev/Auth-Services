@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Jumpdrive-Auth.iml" filepath="$PROJECT_DIR$/.idea/Jumpdrive-Auth.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../Projects/auth-testing/.idea/auth-testing.iml" filepath="$PROJECT_DIR$/../../Projects/auth-testing/.idea/auth-testing.iml" />
     </modules>
   </component>
 </project>
