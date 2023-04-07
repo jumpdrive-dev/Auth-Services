@@ -2,8 +2,8 @@ use std::ops::Add;
 
 use chrono::{Duration, Months, Utc};
 use rsa::pkcs1v15::SigningKey;
-use rsa::RsaPrivateKey;
 use rsa::signature::{SignatureEncoding, Signer};
+use rsa::RsaPrivateKey;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::Sha256;
@@ -45,13 +45,9 @@ impl JwtService {
 
     /// Creates a refresh token for the given grant and sets the [JwtHeader] and [JwtClaims]
     /// accordingly. A refresh token has an expire time of 15 minutes.
-    pub fn create_access_token<T>(
-        &self,
-        subject: impl Into<String>,
-        payload: T,
-    ) -> Result<String>
+    pub fn create_access_token<T>(&self, subject: impl Into<String>, payload: T) -> Result<String>
     where
-        T: Serialize
+        T: Serialize,
     {
         let header = JwtHeader {
             cty: JwtTokenType::Access,
@@ -73,13 +69,9 @@ impl JwtService {
 
     /// Creates a refresh token with the provided payload and sets the [JwtHeader] and [JwtClaims]
     /// accordingly. A refresh token has an expire time of three months.
-    pub fn create_refresh_token<T>(
-        &self,
-        subject: impl Into<String>,
-        payload: T,
-    ) -> Result<String>
+    pub fn create_refresh_token<T>(&self, subject: impl Into<String>, payload: T) -> Result<String>
     where
-        T: Serialize
+        T: Serialize,
     {
         let header = JwtHeader {
             cty: JwtTokenType::Refresh,
@@ -123,11 +115,7 @@ impl JwtService {
 
     /// Merges the JSON representation for the [JwtClaims] with the payload for the token and
     /// returns a single JSON object to be used as the JWT payload.
-    fn merge_claims_with_payload<T>(
-        &self,
-        claims: JwtClaims,
-        payload: T,
-    ) -> Result<Value>
+    fn merge_claims_with_payload<T>(&self, claims: JwtClaims, payload: T) -> Result<Value>
     where
         T: Serialize,
     {
@@ -176,10 +164,7 @@ impl JwtService {
     }
 
     /// Decodes the given access token and makes sure the token can be used at the current time.
-    pub fn decode_access_token<T>(
-        &self,
-        token: impl Into<String>,
-    ) -> Result<T>
+    pub fn decode_access_token<T>(&self, token: impl Into<String>) -> Result<T>
     where
         for<'a> T: Deserialize<'a>,
     {
@@ -208,10 +193,7 @@ impl JwtService {
     }
 
     /// Decodes the given refresh token and makes sure the token can be used at the current time.
-    pub fn decode_refresh_token<T>(
-        &self,
-        token: impl Into<String>
-    ) -> Result<T>
+    pub fn decode_refresh_token<T>(&self, token: impl Into<String>) -> Result<T>
     where
         for<'a> T: Deserialize<'a>,
     {
@@ -244,10 +226,7 @@ impl JwtService {
     /// the caller. If you created a token using either the [create_access_token] or
     /// [create_refresh_token] method, make sure to use decode methods for those instead of
     /// this one.
-    pub fn decode_jwt<T>(
-        &self,
-        token: impl Into<String>,
-    ) -> Result<(JwtHeader, JwtClaims, T)>
+    pub fn decode_jwt<T>(&self, token: impl Into<String>) -> Result<(JwtHeader, JwtClaims, T)>
     where
         for<'a> T: Deserialize<'a>,
     {
@@ -282,9 +261,7 @@ impl JwtService {
 
     /// Takes the JWT payload as a raw JSON object and returns the claims and payload for
     /// that object.
-    fn split_payload<T>(
-        payload_value: Value,
-    ) -> Result<(JwtClaims, T)>
+    fn split_payload<T>(payload_value: Value) -> Result<(JwtClaims, T)>
     where
         for<'a> T: Deserialize<'a>,
     {
@@ -303,9 +280,7 @@ impl JwtService {
 
     /// Checks the 'not before' and 'expire at' claims and returns an Err result if something does
     /// not match.
-    pub fn guard_claims(
-        claims: &JwtClaims,
-    ) -> Result<()> {
+    pub fn guard_claims(claims: &JwtClaims) -> Result<()> {
         let now_timestamp = Utc::now().timestamp();
 
         if now_timestamp < claims.nbf {
@@ -321,9 +296,7 @@ impl JwtService {
 
     /// Returns true if all the 'not before' and 'expire at' claims are valid and returns false
     /// otherwise.
-    pub fn check_claims(
-        claims: &JwtClaims,
-    ) -> bool {
+    pub fn check_claims(claims: &JwtClaims) -> bool {
         match JwtService::guard_claims(claims) {
             Ok(_) => true,
             Err(_) => false,

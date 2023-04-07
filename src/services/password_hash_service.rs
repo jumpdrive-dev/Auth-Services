@@ -1,7 +1,7 @@
 use std::ops::Add;
 
-use rand::{Rng, thread_rng};
 use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use sha2::{Digest, Sha256};
 
 pub struct PasswordHashService;

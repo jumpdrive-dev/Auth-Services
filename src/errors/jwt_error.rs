@@ -1,6 +1,6 @@
+use base64_url::base64::DecodeError;
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
-use base64_url::base64::DecodeError;
 
 #[derive(Debug)]
 pub enum JwtError {
@@ -40,7 +40,9 @@ impl Display for JwtError {
             JwtError::FailedToSerializeJson => "Failed to serialize JSON payload",
             JwtError::FailedToDecodeBase64Url => "Failed to decode base64url encoded part of token",
             JwtError::FailedToReadStringAsUtf8 => "Failed to read token as UTF-8",
-            JwtError::NotEnoughPermissions => "This token does not have enough permissions for this operation",
+            JwtError::NotEnoughPermissions => {
+                "This token does not have enough permissions for this operation"
+            }
             JwtError::MissingToken => "Expected a JWT token, but none was provided",
         };
 

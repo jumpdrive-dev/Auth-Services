@@ -25,21 +25,16 @@ impl TotpService {
     }
 
     /// Takes a secret key and generates a one-time password for using the current UTC time.
-    pub fn generate_code(
-        secret_key: impl Into<String>,
-    ) -> Result<String, TotpError> {
-        Self::generate_code_with_step(
-            secret_key,
-            Self::get_time_step(),
-        )
+    pub fn generate_code(secret_key: impl Into<String>) -> Result<String, TotpError> {
+        Self::generate_code_with_step(secret_key, Self::get_time_step())
     }
 
     fn generate_code_with_step(
         secret_key: impl Into<String>,
         step: u64,
     ) -> Result<String, TotpError> {
-        let k = base32::decode(ALPHABET, &secret_key.into())
-            .ok_or(TotpError::FailedToDecodeSecret)?;
+        let k =
+            base32::decode(ALPHABET, &secret_key.into()).ok_or(TotpError::FailedToDecodeSecret)?;
 
         let m: [u8; 8] = step.to_be_bytes();
         let hash = hmac_sha1(&k, &m);
@@ -70,15 +65,9 @@ impl TotpService {
         let secret_key = secret_key.into();
         let current_step = Self::get_time_step();
 
-        let last = Self::generate_code_with_step(
-            &secret_key,
-            current_step - 1,
-        )?;
+        let last = Self::generate_code_with_step(&secret_key, current_step - 1)?;
 
-        let current = Self::generate_code_with_step(
-            &secret_key,
-            current_step
-        )?;
+        let current = Self::generate_code_with_step(&secret_key, current_step)?;
 
         Ok(code == last || code == current)
     }
@@ -90,10 +79,7 @@ impl TotpService {
         secret_key: impl Into<String>,
         code: impl Into<String>,
     ) -> Result<(), TotpError> {
-        let valid = Self::validate_code(
-            secret_key,
-            code,
-        )?;
+        let valid = Self::validate_code(secret_key, code)?;
 
         if !valid {
             return Err(TotpError::InvalidOneTimePassword);
