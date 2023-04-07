@@ -13,9 +13,9 @@ You can replace 'auth' with anything you like the auth crate in your application
 
 ## Features
 
-Currently implements the following services and planned services:
+Currently, implements the following services and planned services:
 
 - [x] Password hash service
 - [x] JWT service
-- [ ] 2FA service
+- [x] 2FA service
 - [ ] Passkey service
