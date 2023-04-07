@@ -123,8 +123,7 @@ impl JwtService {
 
         let Value::Object(claims_map) = serde_json::to_value(claims)? else {
             return Err(
-                JwtError::PayloadNotAnObject
-                    .into(),
+                JwtError::PayloadNotAnObject,
             );
         };
 
@@ -135,7 +134,6 @@ impl JwtService {
         let Value::Object(payload_map) = serde_json::to_value(payload)? else {
             return Err(
                 JwtError::PayloadNotAnObject
-                    .into()
             );
         };
 
@@ -186,7 +184,7 @@ impl JwtService {
         let (header, claims, payload) = self.decode_jwt(token.into())?;
 
         if header.cty != JwtTokenType::Access {
-            return Err(JwtError::NotAnAccessToken.into());
+            return Err(JwtError::NotAnAccessToken);
         }
 
         Ok((claims, payload))
@@ -215,7 +213,7 @@ impl JwtService {
         let (header, claims, payload) = self.decode_jwt(token.into())?;
 
         if header.cty != JwtTokenType::Refresh {
-            return Err(JwtError::NotARefreshToken.into());
+            return Err(JwtError::NotARefreshToken);
         }
 
         Ok((claims, payload))
@@ -242,7 +240,7 @@ impl JwtService {
         let signature_check = self.sign_key(header_part, payload_part)?;
 
         if signature_check != signature {
-            return Err(JwtError::InvalidSignature.into());
+            return Err(JwtError::InvalidSignature);
         }
 
         let header_bytes = base64_url::decode(header_part)?;
@@ -268,7 +266,6 @@ impl JwtService {
         let Value::Object(_) = payload_value else {
             return Err(
                 JwtError::PayloadIsNotJson
-                    .into()
             );
         };
 
@@ -284,11 +281,11 @@ impl JwtService {
         let now_timestamp = Utc::now().timestamp();
 
         if now_timestamp < claims.nbf {
-            return Err(JwtError::UsedBeforeNotBeforeClaim.into());
+            return Err(JwtError::UsedBeforeNotBeforeClaim);
         }
 
         if now_timestamp > claims.exp {
-            return Err(JwtError::UsedAfterExpireClaim.into());
+            return Err(JwtError::UsedAfterExpireClaim);
         }
 
         Ok(())

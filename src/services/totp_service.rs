@@ -1,8 +1,5 @@
-use std::io::Read;
-
 use chrono::Utc;
-use hmac::Hmac;
-use hmac::Mac;
+
 use hmacsha1::hmac_sha1;
 use rand::RngCore;
 
@@ -42,9 +39,9 @@ impl TotpService {
 
         let slice_offset = [
             hash[offset] & 0x7f,
-            hash[offset + 1] & 0xff,
-            hash[offset + 2] & 0xff,
-            hash[offset + 3] & 0xff,
+            hash[offset + 1],
+            hash[offset + 2],
+            hash[offset + 3],
         ];
 
         let code = u32::from_be_bytes(slice_offset) % 1000000;
