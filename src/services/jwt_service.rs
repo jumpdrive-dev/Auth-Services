@@ -14,7 +14,6 @@ use crate::models::jwt::jwt_headers::JwtHeader;
 use crate::models::jwt::jwt_token_type::JwtTokenType;
 
 /// Service with functions to generate and verify JWT tokens
-#[derive(Debug)]
 pub struct JwtService {
     signing_key: SigningKey<Sha256>,
     access_token_seconds: u32,
