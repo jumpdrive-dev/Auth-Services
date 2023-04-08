@@ -16,7 +16,7 @@ pub struct JwtHeader {
 
     /// This is usually used when using nested JWT tokens, but here it's used to differentiate
     /// between access tokens and refresh tokens.
-    pub cty: JwtTokenType,
+    pub cty: Option<JwtTokenType>,
 }
 
 impl Default for JwtHeader {
@@ -24,7 +24,7 @@ impl Default for JwtHeader {
         Self {
             alg: "RS256".to_string(),
             typ: "JWT".to_string(),
-            cty: JwtTokenType::Access,
+            cty: None,
         }
     }
 }
