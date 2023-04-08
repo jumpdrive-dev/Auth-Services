@@ -83,7 +83,7 @@ impl TotpService {
 
 #[cfg(test)]
 mod tests {
-    use crate::errors::TotpError;
+    
     use crate::services::TotpService;
 
     const SECRET_KEY: &str = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
