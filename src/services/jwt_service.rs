@@ -302,10 +302,7 @@ impl JwtService {
     /// Returns true if all the 'not before' and 'expire at' claims are valid and returns false
     /// otherwise.
     pub fn check_claims(claims: &JwtClaims) -> bool {
-        match JwtService::guard_claims(claims) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        JwtService::guard_claims(claims).is_ok()
     }
 }
 
