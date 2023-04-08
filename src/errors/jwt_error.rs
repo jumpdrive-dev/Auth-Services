@@ -2,7 +2,7 @@ use base64_url::base64::DecodeError;
 use std::fmt::{Display, Formatter};
 use std::string::FromUtf8Error;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum JwtError {
     PayloadIsNotJson,
     PayloadNotAnObject,
