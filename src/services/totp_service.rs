@@ -21,37 +21,6 @@ impl TotpService {
         base32::encode(ALPHABET, &buffer)
     }
 
-    /// Takes a secret key and generates a one-time password for using the current UTC time.
-    pub fn generate_code(secret_key: impl Into<String>) -> Result<String, TotpError> {
-        Self::generate_code_with_step(secret_key, Self::get_time_step())
-    }
-
-    fn generate_code_with_step(
-        secret_key: impl Into<String>,
-        step: u64,
-    ) -> Result<String, TotpError> {
-        let k =
-            base32::decode(ALPHABET, &secret_key.into()).ok_or(TotpError::FailedToDecodeSecret)?;
-
-        let m: [u8; 8] = step.to_be_bytes();
-        let hash = hmac_sha1(&k, &m);
-        let offset = (hash.last().unwrap() & 0xf) as usize;
-
-        let slice_offset = [
-            hash[offset] & 0x7f,
-            hash[offset + 1],
-            hash[offset + 2],
-            hash[offset + 3],
-        ];
-
-        let code = u32::from_be_bytes(slice_offset) % 1000000;
-        Ok(format!("{:0>6}", code))
-    }
-
-    fn get_time_step() -> u64 {
-        (Utc::now().timestamp() / 30) as u64
-    }
-
     /// Takes a secret key and a one-time password and checks whether it's still valid. One-time
     /// passwords last for two steps (or 60 second cycles.)
     pub fn validate_code(
@@ -83,5 +52,31 @@ impl TotpService {
         }
 
         Ok(())
+    }
+
+    fn generate_code_with_step(
+        secret_key: impl Into<String>,
+        step: u64,
+    ) -> Result<String, TotpError> {
+        let k =
+            base32::decode(ALPHABET, &secret_key.into()).ok_or(TotpError::FailedToDecodeSecret)?;
+
+        let m: [u8; 8] = step.to_be_bytes();
+        let hash = hmac_sha1(&k, &m);
+        let offset = (hash.last().unwrap() & 0xf) as usize;
+
+        let slice_offset = [
+            hash[offset] & 0x7f,
+            hash[offset + 1],
+            hash[offset + 2],
+            hash[offset + 3],
+        ];
+
+        let code = u32::from_be_bytes(slice_offset) % 1000000;
+        Ok(format!("{:0>6}", code))
+    }
+
+    fn get_time_step() -> u64 {
+        (Utc::now().timestamp() / 30) as u64
     }
 }
