@@ -311,12 +311,12 @@ impl JwtService {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-    use rsa::{BigUint, RsaPrivateKey};
-    use serde::{Deserialize, Serialize};
     use crate::errors::JwtError;
     use crate::models::jwt::{JwtClaims, JwtHeader, JwtTokenType};
     use crate::services::JwtService;
+    use rsa::{BigUint, RsaPrivateKey};
+    use serde::{Deserialize, Serialize};
+    use std::str::FromStr;
 
     #[derive(Debug, Serialize, Deserialize)]
     struct TestPayload {
@@ -361,17 +361,17 @@ mod tests {
     fn jwt_token_can_be_generated() {
         let jwt_service = create_jwt_service();
 
-        let token = jwt_service.create_token(
-            JwtHeader::default(),
-            create_jwt_claims(),
-            TestPayload {
-                username: "Alice".to_string(),
-            },
-        )
+        let token = jwt_service
+            .create_token(
+                JwtHeader::default(),
+                create_jwt_claims(),
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload>(token)
-            .unwrap();
+        let parts = jwt_service.decode_jwt::<TestPayload>(token).unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -385,16 +385,16 @@ mod tests {
     fn jwt_access_token_can_be_generated() {
         let jwt_service = create_jwt_service();
 
-        let token = jwt_service.create_access_token(
-            "Alice",
-            TestPayload {
-                username: "Alice".to_string(),
-            },
-        )
+        let token = jwt_service
+            .create_access_token(
+                "Alice",
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload>(token)
-            .unwrap();
+        let parts = jwt_service.decode_jwt::<TestPayload>(token).unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -408,16 +408,16 @@ mod tests {
     fn jwt_refresh_token_can_be_generated() {
         let jwt_service = create_jwt_service();
 
-        let token = jwt_service.create_refresh_token(
-            "Alice",
-            TestPayload {
-                username: "Alice".to_string(),
-            },
-        )
+        let token = jwt_service
+            .create_refresh_token(
+                "Alice",
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload>(token)
-            .unwrap();
+        let parts = jwt_service.decode_jwt::<TestPayload>(token).unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -429,10 +429,7 @@ mod tests {
 
     #[test]
     fn payload_that_is_not_a_json_object_returns_err() {
-        let result = create_jwt_service().create_access_token(
-            "Alice",
-            "not-a-json-object"
-        );
+        let result = create_jwt_service().create_access_token("Alice", "not-a-json-object");
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), JwtError::PayloadNotAnObject);
@@ -442,16 +439,16 @@ mod tests {
     fn jwt_access_token_can_be_decoded() {
         let jwt_service = create_jwt_service();
 
-        let token = jwt_service.create_access_token(
-            "Alice",
-            TestPayload {
-                username: "Alice".to_string(),
-            }
-        )
+        let token = jwt_service
+            .create_access_token(
+                "Alice",
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
             .unwrap();
 
-        let payload: TestPayload = jwt_service.decode_access_token(token)
-            .unwrap();
+        let payload: TestPayload = jwt_service.decode_access_token(token).unwrap();
 
         assert_eq!(payload.username, "Alice");
     }
@@ -460,12 +457,13 @@ mod tests {
     fn cannot_decode_refresh_token_as_access_token() {
         let jwt_service = create_jwt_service();
 
-        let token = jwt_service.create_refresh_token(
-            "Alice",
-            TestPayload {
-                username: "Alice".to_string(),
-            }
-        )
+        let token = jwt_service
+            .create_refresh_token(
+                "Alice",
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
             .unwrap();
 
         let result = jwt_service.decode_access_token::<TestPayload>(token);
@@ -478,16 +476,16 @@ mod tests {
     fn jwt_refresh_token_can_be_decoded() {
         let jwt_service = create_jwt_service();
 
-        let token = jwt_service.create_refresh_token(
-            "Alice",
-            TestPayload {
-                username: "Alice".to_string(),
-            }
-        )
+        let token = jwt_service
+            .create_refresh_token(
+                "Alice",
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
             .unwrap();
 
-        let payload: TestPayload = jwt_service.decode_refresh_token(token)
-            .unwrap();
+        let payload: TestPayload = jwt_service.decode_refresh_token(token).unwrap();
 
         assert_eq!(payload.username, "Alice");
     }
@@ -496,12 +494,13 @@ mod tests {
     fn cannot_decode_access_token_as_refresh_token() {
         let jwt_service = create_jwt_service();
 
-        let token = jwt_service.create_access_token(
-            "Alice",
-            TestPayload {
-                username: "Alice".to_string(),
-            }
-        )
+        let token = jwt_service
+            .create_access_token(
+                "Alice",
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
             .unwrap();
 
         let result = jwt_service.decode_refresh_token::<TestPayload>(token);

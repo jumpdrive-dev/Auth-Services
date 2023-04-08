@@ -83,7 +83,7 @@ impl TotpService {
 
 #[cfg(test)]
 mod tests {
-    
+
     use crate::services::TotpService;
 
     const SECRET_KEY: &str = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
@@ -100,8 +100,7 @@ mod tests {
         ];
 
         for (step, expected) in cases {
-            let code = TotpService::generate_code_with_step(SECRET_KEY, step)
-                .unwrap();
+            let code = TotpService::generate_code_with_step(SECRET_KEY, step).unwrap();
 
             let expected_code = expected % 1000000;
             assert_eq!(code, format!("{:0>6}", expected_code));
@@ -110,68 +109,43 @@ mod tests {
 
     #[test]
     fn correct_code_can_be_validated() {
-        let code = TotpService::generate_code_with_step(
-            SECRET_KEY,
-            TotpService::get_time_step()
-        )
-            .unwrap();
+        let code =
+            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_time_step()).unwrap();
 
-        let valid = TotpService::validate_code(
-            SECRET_KEY,
-            code,
-        )
-            .unwrap();
+        let valid = TotpService::validate_code(SECRET_KEY, code).unwrap();
 
         assert!(valid);
     }
 
     #[test]
     fn code_from_previous_step_is_still_valid() {
-        let code = TotpService::generate_code_with_step(
-            SECRET_KEY,
-            TotpService::get_time_step() - 1
-        )
-            .unwrap();
+        let code =
+            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_time_step() - 1)
+                .unwrap();
 
-        let valid = TotpService::validate_code(
-            SECRET_KEY,
-            code,
-        )
-            .unwrap();
+        let valid = TotpService::validate_code(SECRET_KEY, code).unwrap();
 
         assert!(valid);
     }
 
     #[test]
     fn expired_code_is_invalid() {
-        let code = TotpService::generate_code_with_step(
-            SECRET_KEY,
-            TotpService::get_time_step() - 10
-        )
-            .unwrap();
+        let code =
+            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_time_step() - 10)
+                .unwrap();
 
-        let valid = TotpService::validate_code(
-            SECRET_KEY,
-            code,
-        )
-            .unwrap();
+        let valid = TotpService::validate_code(SECRET_KEY, code).unwrap();
 
         assert!(!valid);
     }
 
     #[test]
     fn future_code_is_invalid() {
-        let code = TotpService::generate_code_with_step(
-            SECRET_KEY,
-            TotpService::get_time_step() + 1
-        )
-            .unwrap();
+        let code =
+            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_time_step() + 1)
+                .unwrap();
 
-        let valid = TotpService::validate_code(
-            SECRET_KEY,
-            code,
-        )
-            .unwrap();
+        let valid = TotpService::validate_code(SECRET_KEY, code).unwrap();
 
         assert!(!valid);
     }
