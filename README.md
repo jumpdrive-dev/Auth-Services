@@ -1,15 +1,15 @@
 # Jumpdrive-Auth
+
 Rust crate which provides some common services for implementing authentication in applications.
 
 ## Usage
 
-I currently have no intentions to publish this to crates.io, so for now if you want to use this you can add it as a submodule using:
+I currently have no intentions to publish this to crates.io, so for now if you want to use this you can add as a git
+dependency using:
 
-```shell
-git submodule add https://github.com/Jumpdrive-dev/Auth-Services Auth
+```toml
+jumpdrive-auth = { git = "https://github.com/Jumpdrive-dev/Auth-Services", tag = "1.0.0" }
 ```
-
-You can replace 'auth' with anything you like the auth crate in your application to be called.
 
 ## Features
 

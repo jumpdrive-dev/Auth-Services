@@ -379,6 +379,32 @@ mod tests {
     }
 
     #[test]
+    fn jwt_token_can_be_generated_with_borrowed_payload() {
+        let jwt_service = create_jwt_service();
+
+        let payload = TestPayload {
+            username: "Alice".to_string(),
+        };
+
+        let token = jwt_service
+            .create_token(
+                JwtHeader::default(),
+                create_jwt_claims(),
+                &payload,
+            )
+            .unwrap();
+
+        let parts = jwt_service.decode_jwt::<TestPayload>(token).unwrap();
+
+        assert_eq!(parts.0.typ, "JWT");
+        assert_eq!(parts.0.alg, "RS256");
+        assert_eq!(parts.1.exp, 10);
+        assert_eq!(parts.1.nbf, 20);
+        assert_eq!(parts.1.iat, 30);
+        assert_eq!(parts.2.username, "Alice");
+    }
+
+    #[test]
     fn jwt_access_token_can_be_generated() {
         let jwt_service = create_jwt_service();
 
