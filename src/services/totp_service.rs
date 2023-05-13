@@ -1,9 +1,8 @@
 use chrono::Utc;
-
 use hmacsha1::hmac_sha1;
 use rand::RngCore;
 
-use crate::errors::TotpError;
+use crate::errors::totp_error::TotpError;
 
 /// Service for implementing multi-factor authentication using time bases passwords.
 pub struct TotpService;
@@ -81,7 +80,7 @@ impl TotpService {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "test-utils")]
 impl TotpService {
     /// Only available withing a test environment. Generates a 2FA code with the given secret key
     /// and time step. To generate a code using the current time step, use
@@ -111,7 +110,6 @@ impl TotpService {
 
 #[cfg(test)]
 mod tests {
-
     use crate::services::TotpService;
 
     const SECRET_KEY: &str = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
