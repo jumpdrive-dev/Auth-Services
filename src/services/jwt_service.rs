@@ -167,7 +167,7 @@ impl JwtService {
         for<'a> T: Deserialize<'a>,
     {
         let (claims, payload) = self.decode_access_token_unchecked(token)?;
-        JwtService::guard_claims(&claims)?;
+        Self::guard_claims(&claims)?;
 
         Ok(payload)
     }
@@ -200,7 +200,7 @@ impl JwtService {
         for<'a> T: Deserialize<'a>,
     {
         let (claims, payload) = self.decode_refresh_token_unchecked(token)?;
-        JwtService::guard_claims(&claims)?;
+        Self::guard_claims(&claims)?;
 
         Ok(payload)
     }
@@ -225,6 +225,20 @@ impl JwtService {
         }
 
         Ok((claims, payload))
+    }
+
+    /// Decodes a JWT token and only returns the claims.
+    pub fn decode_claims(&self, token: impl Into<String>) -> Result<JwtClaims> {
+        let claims = self.decode_jwt(token)?.1;
+        Self::guard_claims(&claims)?;
+
+        Ok(claims)
+    }
+
+    /// Decodes a JWT token and only returns the claims. Does not perform any checks other than
+    /// checking the signature of the token.
+    pub fn decode_claims_unchecked(&self, token: impl Into<String>) -> Result<JwtClaims> {
+        Ok(self.decode_jwt(token)?.1)
     }
 
     /// Decodes the given JWT token and returns all the given important parts of the token. It
