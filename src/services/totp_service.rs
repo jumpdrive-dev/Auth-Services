@@ -29,7 +29,7 @@ impl TotpService {
     ) -> Result<bool, TotpError> {
         let code = code.into();
         let secret_key = secret_key.into();
-        let current_step = Self::get_time_step();
+        let current_step = Self::get_current_time_step();
 
         let last = Self::generate_code_with_step(&secret_key, current_step - 1)?;
 
@@ -76,8 +76,36 @@ impl TotpService {
         Ok(format!("{:0>6}", code))
     }
 
-    fn get_time_step() -> u64 {
+    fn get_current_time_step() -> u64 {
         (Utc::now().timestamp() / 30) as u64
+    }
+}
+
+#[cfg(test)]
+impl TotpService {
+    /// Only available withing a test environment. Generates a 2FA code with the given secret key
+    /// and time step. To generate a code using the current time step, use
+    /// [TotpService::test_generate_current_code].
+    pub fn test_generate_code_with_step(
+        secret_key: impl Into<String>,
+        step: u64,
+    ) -> Result<String, TotpError> {
+        Self::generate_code_with_step(
+            secret_key,
+            step
+        )
+    }
+
+    /// Only available within a test environment. Generates a 2FA code with the given secret key and
+    /// uses the current time step. To generate a code with a specific time step, use
+    /// [TotpService::test_generate_code_with_step].
+    pub fn test_generate_current_code(
+        secret_key: impl Into<String>,
+    ) -> Result<String, TotpError> {
+        Self::generate_code_with_step(
+            secret_key,
+            Self::get_current_time_step(),
+        )
     }
 }
 
@@ -110,7 +138,7 @@ mod tests {
     #[test]
     fn correct_code_can_be_validated() {
         let code =
-            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_time_step()).unwrap();
+            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_current_time_step()).unwrap();
 
         let valid = TotpService::validate_code(SECRET_KEY, code).unwrap();
 
@@ -120,7 +148,7 @@ mod tests {
     #[test]
     fn code_from_previous_step_is_still_valid() {
         let code =
-            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_time_step() - 1)
+            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_current_time_step() - 1)
                 .unwrap();
 
         let valid = TotpService::validate_code(SECRET_KEY, code).unwrap();
@@ -131,7 +159,7 @@ mod tests {
     #[test]
     fn expired_code_is_invalid() {
         let code =
-            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_time_step() - 10)
+            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_current_time_step() - 10)
                 .unwrap();
 
         let valid = TotpService::validate_code(SECRET_KEY, code).unwrap();
@@ -142,7 +170,7 @@ mod tests {
     #[test]
     fn future_code_is_invalid() {
         let code =
-            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_time_step() + 1)
+            TotpService::generate_code_with_step(SECRET_KEY, TotpService::get_current_time_step() + 1)
                 .unwrap();
 
         let valid = TotpService::validate_code(SECRET_KEY, code).unwrap();
