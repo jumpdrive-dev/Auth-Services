@@ -92,14 +92,15 @@ impl JwtService {
     }
 
     /// Used to create a JWT token with custom a headers and claims.
-    pub fn create_token<T>(
+    pub fn create_token<T, H>(
         &self,
-        header: JwtHeader,
+        header: JwtHeader<H>,
         claims: JwtClaims,
         payload: T,
     ) -> Result<String>
     where
         T: Serialize,
+        for<'a> H: Serialize + Deserialize<'a>,
     {
         let payload_value = self.merge_claims_with_payload(claims, payload)?;
 
@@ -181,7 +182,7 @@ impl JwtService {
     where
         for<'a> T: Deserialize<'a>,
     {
-        let (header, claims, payload) = self.decode_jwt(token.into())?;
+        let (header, claims, payload) = self.decode_jwt::<T, JwtTokenType>(token.into())?;
 
         let Some(token_type) = header.cty else {
             return Err(JwtError::NotAnAccessToken);
@@ -214,7 +215,7 @@ impl JwtService {
     where
         for<'a> T: Deserialize<'a>,
     {
-        let (header, claims, payload) = self.decode_jwt(token.into())?;
+        let (header, claims, payload) = self.decode_jwt::<T, JwtTokenType>(token.into())?;
 
         let Some(token_type) = header.cty else {
             return Err(JwtError::NotARefreshToken);
@@ -228,8 +229,14 @@ impl JwtService {
     }
 
     /// Decodes a JWT token and only returns the claims.
-    pub fn decode_claims(&self, token: impl Into<String>) -> Result<JwtClaims> {
-        let claims = self.decode_jwt::<()>(token)?.1;
+    pub fn decode_claims<H>(
+        &self,
+        token: impl Into<String>
+    ) -> Result<JwtClaims>
+    where
+        for<'a> H: Serialize + Deserialize<'a>
+    {
+        let claims = self.decode_jwt::<(), H>(token)?.1;
         Self::guard_claims(&claims)?;
 
         Ok(claims)
@@ -237,8 +244,14 @@ impl JwtService {
 
     /// Decodes a JWT token and only returns the claims. Does not perform any checks other than
     /// checking the signature of the token.
-    pub fn decode_claims_unchecked(&self, token: impl Into<String>) -> Result<JwtClaims> {
-        Ok(self.decode_jwt::<()>(token)?.1)
+    pub fn decode_claims_unchecked<H>(
+        &self,
+        token: impl Into<String>,
+    ) -> Result<JwtClaims>
+    where
+            for<'a> H: Serialize + Deserialize<'a>
+    {
+        Ok(self.decode_jwt::<(), H>(token)?.1)
     }
 
     /// Decodes the given JWT token and returns all the given important parts of the token. It
@@ -246,9 +259,13 @@ impl JwtService {
     /// the caller. If you created a token using either the [create_access_token] or
     /// [create_refresh_token] method, make sure to use decode methods for those instead of
     /// this one.
-    pub fn decode_jwt<T>(&self, token: impl Into<String>) -> Result<(JwtHeader, JwtClaims, T)>
+    pub fn decode_jwt<T, H>(
+        &self,
+        token: impl Into<String>,
+    ) -> Result<(JwtHeader<H>, JwtClaims, T)>
     where
         for<'a> T: Deserialize<'a>,
+        for<'a> H: Serialize + Deserialize<'a>,
     {
         let token = token.into();
 
@@ -373,7 +390,7 @@ mod tests {
         let jwt_service = create_jwt_service();
 
         let token = jwt_service
-            .create_token(
+            .create_token::<TestPayload, JwtTokenType>(
                 JwtHeader::default(),
                 create_jwt_claims(),
                 TestPayload {
@@ -382,7 +399,7 @@ mod tests {
             )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload>(token).unwrap();
+        let parts = jwt_service.decode_jwt::<TestPayload, JwtTokenType>(token).unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -401,14 +418,14 @@ mod tests {
         };
 
         let token = jwt_service
-            .create_token(
+            .create_token::<&TestPayload, JwtTokenType>(
                 JwtHeader::default(),
                 create_jwt_claims(),
                 &payload,
             )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload>(token).unwrap();
+        let parts = jwt_service.decode_jwt::<TestPayload, JwtTokenType>(token).unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -431,7 +448,7 @@ mod tests {
             )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload>(token).unwrap();
+        let parts = jwt_service.decode_jwt::<TestPayload, JwtTokenType>(token).unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -454,7 +471,7 @@ mod tests {
             )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload>(token).unwrap();
+        let parts = jwt_service.decode_jwt::<TestPayload, JwtTokenType>(token).unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
