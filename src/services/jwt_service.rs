@@ -229,7 +229,7 @@ impl JwtService {
 
     /// Decodes a JWT token and only returns the claims.
     pub fn decode_claims(&self, token: impl Into<String>) -> Result<JwtClaims> {
-        let claims = self.decode_jwt(token)?.1;
+        let claims = self.decode_jwt::<()>(token)?.1;
         Self::guard_claims(&claims)?;
 
         Ok(claims)
@@ -238,7 +238,7 @@ impl JwtService {
     /// Decodes a JWT token and only returns the claims. Does not perform any checks other than
     /// checking the signature of the token.
     pub fn decode_claims_unchecked(&self, token: impl Into<String>) -> Result<JwtClaims> {
-        Ok(self.decode_jwt(token)?.1)
+        Ok(self.decode_jwt::<()>(token)?.1)
     }
 
     /// Decodes the given JWT token and returns all the given important parts of the token. It
