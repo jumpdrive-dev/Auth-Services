@@ -16,7 +16,7 @@ use crate::models::jwt::jwt_headers::JwtHeader;
 use crate::models::jwt::jwt_token_type::JwtTokenType;
 
 /// Service with functions to generate and verify JWT tokens
-pub(crate) struct JwtService {
+pub struct JwtService {
     signing_key: SigningKey<Sha256>,
     access_token_seconds: u32,
     issuer: String,
@@ -33,7 +33,7 @@ impl JwtService {
         audience: impl Into<String>,
     ) -> Self {
         Self {
-            signing_key: SigningKey::new_with_prefix(private_key),
+            signing_key: SigningKey::new(private_key),
             access_token_seconds,
             issuer: issuer.into(),
             audience: audience.into(),
