@@ -2,8 +2,8 @@ use std::ops::Add;
 
 use chrono::{Duration, Months, Utc};
 use rsa::pkcs1v15::SigningKey;
+pub use rsa::RsaPrivateKey;
 use rsa::signature::{SignatureEncoding, Signer};
-use rsa::RsaPrivateKey;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::Sha256;
@@ -339,12 +339,14 @@ impl JwtService {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use rsa::{BigUint, RsaPrivateKey};
+    use serde::{Deserialize, Serialize};
+
     use crate::errors::JwtError;
     use crate::models::jwt::{JwtClaims, JwtHeader, JwtTokenType};
     use crate::services::JwtService;
-    use rsa::{BigUint, RsaPrivateKey};
-    use serde::{Deserialize, Serialize};
-    use std::str::FromStr;
 
     #[derive(Debug, Serialize, Deserialize)]
     struct TestPayload {
