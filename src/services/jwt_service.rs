@@ -3,6 +3,7 @@ use std::ops::Add;
 use chrono::{Duration, Months, Utc};
 use rsa::pkcs1v15::SigningKey;
 pub use rsa::RsaPrivateKey;
+pub use rsa::pkcs1::DecodeRsaPrivateKey;
 use rsa::signature::{SignatureEncoding, Signer};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -15,7 +16,7 @@ use crate::models::jwt::jwt_headers::JwtHeader;
 use crate::models::jwt::jwt_token_type::JwtTokenType;
 
 /// Service with functions to generate and verify JWT tokens
-pub struct JwtService {
+pub(crate) struct JwtService {
     signing_key: SigningKey<Sha256>,
     access_token_seconds: u32,
     issuer: String,
