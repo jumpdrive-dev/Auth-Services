@@ -17,6 +17,8 @@ pub enum JwtError {
     FailedToSerializeJson,
     FailedToDecodeBase64Url,
     FailedToReadStringAsUtf8,
+    MissingNbfClaim,
+    MissingExpClaim,
 
     // These values are not actually used within this crate, but are still available to make it a
     // bit easier when working with the error.
@@ -44,6 +46,8 @@ impl Display for JwtError {
                 "This token does not have enough permissions for this operation"
             }
             JwtError::MissingToken => "Expected a JWT token, but none was provided",
+            JwtError::MissingNbfClaim => "Missing nbf claim",
+            JwtError::MissingExpClaim => "Missing exp claim"
         };
 
         write!(f, "{}", slice)

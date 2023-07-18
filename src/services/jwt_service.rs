@@ -56,13 +56,13 @@ impl JwtService {
         };
 
         let claims = JwtClaims {
-            iss: self.issuer.to_string(),
-            aud: self.audience.to_string(),
-            sub: subject.into(),
-            exp: (Utc::now().add(Duration::seconds(self.access_token_seconds as i64))).timestamp(),
-            nbf: Utc::now().timestamp(),
-            iat: Utc::now().timestamp(),
-            jti: Uuid::new_v4().to_string(),
+            iss: Some(self.issuer.to_string()),
+            aud: Some(self.audience.to_string()),
+            sub: Some(subject.into()),
+            exp: Some((Utc::now().add(Duration::seconds(self.access_token_seconds as i64))).timestamp()),
+            nbf: Some(Utc::now().timestamp()),
+            iat: Some(Utc::now().timestamp()),
+            jti: Some(Uuid::new_v4().to_string()),
         };
 
         self.create_token(header, claims, payload)
@@ -80,13 +80,13 @@ impl JwtService {
         };
 
         let claims = JwtClaims {
-            iss: self.issuer.to_string(),
-            aud: self.audience.to_string(),
-            sub: subject.into(),
-            exp: (Utc::now().add(Months::new(3))).timestamp(),
-            nbf: Utc::now().timestamp(),
-            iat: Utc::now().timestamp(),
-            jti: Uuid::new_v4().to_string(),
+            iss: Some(self.issuer.to_string()),
+            aud: Some(self.audience.to_string()),
+            sub: Some(subject.into()),
+            exp: Some((Utc::now().add(Months::new(3))).timestamp()),
+            nbf: Some(Utc::now().timestamp()),
+            iat: Some(Utc::now().timestamp()),
+            jti: Some(Uuid::new_v4().to_string()),
         };
 
         self.create_token(header, claims, payload)
@@ -169,7 +169,7 @@ impl JwtService {
         for<'a> T: Deserialize<'a>,
     {
         let (claims, payload) = self.decode_access_token_unchecked(token)?;
-        Self::guard_claims(&claims)?;
+        self.guard_claims(&claims)?;
 
         Ok(payload)
     }
@@ -202,7 +202,7 @@ impl JwtService {
         for<'a> T: Deserialize<'a>,
     {
         let (claims, payload) = self.decode_refresh_token_unchecked(token)?;
-        Self::guard_claims(&claims)?;
+        self.guard_claims(&claims)?;
 
         Ok(payload)
     }
@@ -238,7 +238,7 @@ impl JwtService {
         for<'a> H: Serialize + Deserialize<'a>
     {
         let claims = self.decode_jwt::<(), H>(token)?.1;
-        Self::guard_claims(&claims)?;
+        self.guard_claims(&claims)?;
 
         Ok(claims)
     }
@@ -317,15 +317,33 @@ impl JwtService {
 
     /// Checks the 'not before' and 'expire at' claims and returns an Err result if something does
     /// not match.
-    pub fn guard_claims(claims: &JwtClaims) -> Result<()> {
-        let now_timestamp = Utc::now().timestamp();
+    pub fn guard_claims(&self, claims: &JwtClaims) -> Result<()> {
+        self.guard_against_claims(claims, &JwtClaims {
+            iss: Some(self.issuer.to_string()),
+            ..JwtClaims::default()
+        })
+    }
 
-        if now_timestamp < claims.nbf {
-            return Err(JwtError::UsedBeforeNotBeforeClaim);
+    /// Takes claims and compares the `iss`, `exp`, and `nbf` claims to the target claims.
+    pub fn guard_against_claims(&self, claims: &JwtClaims, target_claims: &JwtClaims) -> Result<()> {
+        if let Some(target_nbf) = target_claims.nbf {
+            let Some(nbf) = claims.nbf else {
+                return Err(JwtError::MissingNbfClaim);
+            };
+
+            if nbf < target_nbf {
+                return Err(JwtError::UsedBeforeNotBeforeClaim);
+            }
         }
 
-        if now_timestamp > claims.exp {
-            return Err(JwtError::UsedAfterExpireClaim);
+        if let Some(target_exp) = target_claims.exp {
+            let Some(exp) = claims.exp else {
+                return Err(JwtError::MissingExpClaim);
+            };
+
+            if target_exp > exp {
+                return Err(JwtError::UsedAfterExpireClaim);
+            }
         }
 
         Ok(())
@@ -333,8 +351,8 @@ impl JwtService {
 
     /// Returns true if all the 'not before' and 'expire at' claims are valid and returns false
     /// otherwise.
-    pub fn check_claims(claims: &JwtClaims) -> bool {
-        JwtService::guard_claims(claims).is_ok()
+    pub fn check_claims(&self, claims: &JwtClaims) -> bool {
+        self.guard_claims(claims).is_ok()
     }
 }
 
@@ -378,13 +396,13 @@ mod tests {
 
     fn create_jwt_claims() -> JwtClaims {
         JwtClaims {
-            iss: String::from("tester"),
-            sub: String::from("Testing"),
-            aud: String::from("internal-tests"),
-            exp: 10,
-            nbf: 20,
-            iat: 30,
-            jti: "".to_string(),
+            iss: Some(String::from("tester")),
+            sub: Some(String::from("Testing")),
+            aud: Some(String::from("internal-tests")),
+            exp: Some(10),
+            nbf: Some(20),
+            iat: Some(30),
+            jti: Some("".to_string()),
         }
     }
 
@@ -406,9 +424,9 @@ mod tests {
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
-        assert_eq!(parts.1.exp, 10);
-        assert_eq!(parts.1.nbf, 20);
-        assert_eq!(parts.1.iat, 30);
+        assert_eq!(parts.1.exp, Some(10));
+        assert_eq!(parts.1.nbf, Some(20));
+        assert_eq!(parts.1.iat, Some(30));
         assert_eq!(parts.2.username, "Alice");
     }
 
@@ -432,9 +450,9 @@ mod tests {
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
-        assert_eq!(parts.1.exp, 10);
-        assert_eq!(parts.1.nbf, 20);
-        assert_eq!(parts.1.iat, 30);
+        assert_eq!(parts.1.exp, Some(10));
+        assert_eq!(parts.1.nbf, Some(20));
+        assert_eq!(parts.1.iat, Some(30));
         assert_eq!(parts.2.username, "Alice");
     }
 
@@ -456,8 +474,8 @@ mod tests {
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
         assert_eq!(parts.0.cty.unwrap(), JwtTokenType::Access);
-        assert_eq!(parts.1.iss, "tester");
-        assert_eq!(parts.1.aud, "internal-tests");
+        assert_eq!(parts.1.iss, Some("tester".to_string()));
+        assert_eq!(parts.1.aud, Some("internal-tests".to_string()));
         assert_eq!(parts.2.username, "Alice");
     }
 
@@ -479,8 +497,8 @@ mod tests {
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
         assert_eq!(parts.0.cty.unwrap(), JwtTokenType::Refresh);
-        assert_eq!(parts.1.iss, "tester");
-        assert_eq!(parts.1.aud, "internal-tests");
+        assert_eq!(parts.1.iss, Some("tester".to_string()));
+        assert_eq!(parts.1.aud, Some("internal-tests".to_string()));
         assert_eq!(parts.2.username, "Alice");
     }
 
