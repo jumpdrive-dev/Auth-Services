@@ -6,4 +6,3 @@ pub use totp_error::TotpError;
 
 pub(crate) mod jwt_error;
 pub(crate) mod totp_error;
-

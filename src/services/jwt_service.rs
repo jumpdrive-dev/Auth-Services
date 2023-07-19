@@ -1,9 +1,10 @@
 use std::ops::Add;
 
-use chrono::{Duration, Months, Utc};
-use rsa::pkcs1v15::SigningKey;
-pub use rsa::RsaPrivateKey;
 pub use rsa::pkcs1::DecodeRsaPrivateKey;
+pub use rsa::RsaPrivateKey;
+pub use chrono::Duration;
+use chrono::{Utc};
+use rsa::pkcs1v15::SigningKey;
 use rsa::signature::{SignatureEncoding, Signer};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -18,7 +19,8 @@ use crate::models::jwt::jwt_token_type::JwtTokenType;
 /// Service with functions to generate and verify JWT tokens
 pub struct JwtService {
     signing_key: SigningKey<Sha256>,
-    access_token_seconds: u32,
+    access_token_duration: Duration,
+    refresh_token_duration: Duration,
     issuer: String,
     audience: String,
 }
@@ -28,20 +30,22 @@ type Result<T> = std::result::Result<T, JwtError>;
 impl JwtService {
     pub fn new(
         private_key: RsaPrivateKey,
-        access_token_seconds: u32,
+        access_token_duration: Duration,
+        refresh_token_duration: Duration,
         issuer: impl Into<String>,
         audience: impl Into<String>,
     ) -> Self {
         Self {
             signing_key: SigningKey::new(private_key),
-            access_token_seconds,
+            access_token_duration,
+            refresh_token_duration,
             issuer: issuer.into(),
             audience: audience.into(),
         }
     }
 
-    pub fn get_access_token_seconds(&self) -> u32 {
-        self.access_token_seconds
+    pub fn get_access_token_seconds(&self) -> i64 {
+        self.access_token_duration.num_seconds()
     }
 
     /// Creates a refresh token for the given grant and sets the [JwtHeader] and [JwtClaims]
@@ -59,7 +63,9 @@ impl JwtService {
             iss: Some(self.issuer.to_string()),
             aud: Some(self.audience.to_string()),
             sub: Some(subject.into()),
-            exp: Some((Utc::now().add(Duration::seconds(self.access_token_seconds as i64))).timestamp()),
+            exp: Some(
+                (Utc::now().add(self.access_token_duration)).timestamp(),
+            ),
             nbf: Some(Utc::now().timestamp()),
             iat: Some(Utc::now().timestamp()),
             jti: Some(Uuid::new_v4().to_string()),
@@ -83,7 +89,7 @@ impl JwtService {
             iss: Some(self.issuer.to_string()),
             aud: Some(self.audience.to_string()),
             sub: Some(subject.into()),
-            exp: Some((Utc::now().add(Months::new(3))).timestamp()),
+            exp: Some((Utc::now().add(self.refresh_token_duration)).timestamp()),
             nbf: Some(Utc::now().timestamp()),
             iat: Some(Utc::now().timestamp()),
             jti: Some(Uuid::new_v4().to_string()),
@@ -230,12 +236,9 @@ impl JwtService {
     }
 
     /// Decodes a JWT token and only returns the claims.
-    pub fn decode_claims<H>(
-        &self,
-        token: impl Into<String>
-    ) -> Result<JwtClaims>
+    pub fn decode_claims<H>(&self, token: impl Into<String>) -> Result<JwtClaims>
     where
-        for<'a> H: Serialize + Deserialize<'a>
+        for<'a> H: Serialize + Deserialize<'a>,
     {
         let claims = self.decode_jwt::<(), H>(token)?.1;
         self.guard_claims(&claims)?;
@@ -245,12 +248,9 @@ impl JwtService {
 
     /// Decodes a JWT token and only returns the claims. Does not perform any checks other than
     /// checking the signature of the token.
-    pub fn decode_claims_unchecked<H>(
-        &self,
-        token: impl Into<String>,
-    ) -> Result<JwtClaims>
+    pub fn decode_claims_unchecked<H>(&self, token: impl Into<String>) -> Result<JwtClaims>
     where
-            for<'a> H: Serialize + Deserialize<'a>
+        for<'a> H: Serialize + Deserialize<'a>,
     {
         Ok(self.decode_jwt::<(), H>(token)?.1)
     }
@@ -260,10 +260,7 @@ impl JwtService {
     /// the caller. If you created a token using either the [create_access_token] or
     /// [create_refresh_token] method, make sure to use decode methods for those instead of
     /// this one.
-    pub fn decode_jwt<T, H>(
-        &self,
-        token: impl Into<String>,
-    ) -> Result<(JwtHeader<H>, JwtClaims, T)>
+    pub fn decode_jwt<T, H>(&self, token: impl Into<String>) -> Result<(JwtHeader<H>, JwtClaims, T)>
     where
         for<'a> T: Deserialize<'a>,
         for<'a> H: Serialize + Deserialize<'a>,
@@ -297,6 +294,33 @@ impl JwtService {
         Ok((header, claims, payload))
     }
 
+    pub fn decode_payload_against_claims<T, H>(
+        &self,
+        token: impl Into<String>,
+        claims: &JwtClaims,
+    ) -> Result<T>
+    where
+        for<'a> T: Deserialize<'a>,
+        for<'a> H: Serialize + Deserialize<'a>,
+    {
+        Ok(self.decode_against_claims::<T, H>(token, claims)?.2)
+    }
+
+    pub fn decode_against_claims<T, H>(
+        &self,
+        token: impl Into<String>,
+        claims: &JwtClaims,
+    ) -> Result<(JwtHeader<H>, JwtClaims, T)>
+    where
+        for<'a> T: Deserialize<'a>,
+        for<'a> H: Serialize + Deserialize<'a>,
+    {
+        let decoded = self.decode_jwt(token)?;
+        self.guard_against_claims(&decoded.1, claims)?;
+
+        Ok(decoded)
+    }
+
     /// Takes the JWT payload as a raw JSON object and returns the claims and payload for
     /// that object.
     fn split_payload<T>(payload_value: Value) -> Result<(JwtClaims, T)>
@@ -318,14 +342,21 @@ impl JwtService {
     /// Checks the 'not before' and 'expire at' claims and returns an Err result if something does
     /// not match.
     pub fn guard_claims(&self, claims: &JwtClaims) -> Result<()> {
-        self.guard_against_claims(claims, &JwtClaims {
-            iss: Some(self.issuer.to_string()),
-            ..JwtClaims::default()
-        })
+        self.guard_against_claims(
+            claims,
+            &JwtClaims {
+                iss: Some(self.issuer.to_string()),
+                ..JwtClaims::default()
+            },
+        )
     }
 
     /// Takes claims and compares the `iss`, `exp`, and `nbf` claims to the target claims.
-    pub fn guard_against_claims(&self, claims: &JwtClaims, target_claims: &JwtClaims) -> Result<()> {
+    pub fn guard_against_claims(
+        &self,
+        claims: &JwtClaims,
+        target_claims: &JwtClaims,
+    ) -> Result<()> {
         if let Some(target_nbf) = target_claims.nbf {
             let Some(nbf) = claims.nbf else {
                 return Err(JwtError::MissingNbfClaim);
@@ -343,6 +374,26 @@ impl JwtService {
 
             if target_exp > exp {
                 return Err(JwtError::UsedAfterExpireClaim);
+            }
+        }
+
+        if let Some(target_aud) = &target_claims.aud {
+            let Some(aud) = &claims.aud else {
+                return Err(JwtError::MissingAudClaim);
+            };
+
+            if target_aud != aud {
+                return Err(JwtError::MismatchedAudienceClaim);
+            }
+        }
+
+        if let Some(target_iss) = &target_claims.iss {
+            let Some(iss) = &claims.iss else {
+                return Err(JwtError::MissingIssClaim);
+            };
+
+            if target_iss != iss {
+                return Err(JwtError::MismatchedIssuerClaim);
             }
         }
 
@@ -365,6 +416,7 @@ mod tests {
 
     use crate::errors::JwtError;
     use crate::models::jwt::{JwtClaims, JwtHeader, JwtTokenType};
+    use crate::services::jwt_service::Duration;
     use crate::services::JwtService;
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -385,10 +437,11 @@ mod tests {
                         .unwrap(),
                     BigUint::from_str("7541683536441165394165027564769197112271246852984650020233604313173600283919646980685011266989909442158283534805756431333923018511568340875819132987922637")
                         .unwrap(),
-                ]
+                ],
             )
                 .unwrap(),
-            300,
+            Duration::seconds(300),
+            Duration::days(90),
             "tester",
             "internal-tests",
         )
@@ -420,7 +473,9 @@ mod tests {
             )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload, JwtTokenType>(token).unwrap();
+        let parts = jwt_service
+            .decode_jwt::<TestPayload, JwtTokenType>(token)
+            .unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -446,7 +501,9 @@ mod tests {
             )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload, JwtTokenType>(token).unwrap();
+        let parts = jwt_service
+            .decode_jwt::<TestPayload, JwtTokenType>(token)
+            .unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -469,7 +526,9 @@ mod tests {
             )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload, JwtTokenType>(token).unwrap();
+        let parts = jwt_service
+            .decode_jwt::<TestPayload, JwtTokenType>(token)
+            .unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -492,7 +551,9 @@ mod tests {
             )
             .unwrap();
 
-        let parts = jwt_service.decode_jwt::<TestPayload, JwtTokenType>(token).unwrap();
+        let parts = jwt_service
+            .decode_jwt::<TestPayload, JwtTokenType>(token)
+            .unwrap();
 
         assert_eq!(parts.0.typ, "JWT");
         assert_eq!(parts.0.alg, "RS256");
@@ -592,5 +653,137 @@ mod tests {
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), JwtError::InvalidSignature);
+    }
+
+    #[test]
+    fn aud_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    aud: Some("audience".to_string()),
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
+            .unwrap();
+
+        let pass = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                aud: Some("audience".to_string()),
+                ..JwtClaims::default()
+            },
+        );
+
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                aud: Some("not-the-same".to_string()),
+                ..JwtClaims::default()
+            },
+        );
+
+        dbg!(&pass);
+        assert!(pass.is_ok());
+        assert!(fail.is_err());
+    }
+
+    #[test]
+    fn missing_aud_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    aud: None,
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
+            .unwrap();
+
+        let fail = jwt_service.decode_against_claims::<JwtTokenType, TestPayload>(
+            &token,
+            &JwtClaims {
+                aud: Some("audience".to_string()),
+                ..JwtClaims::default()
+            },
+        );
+
+        assert!(fail.is_err());
+    }
+
+    #[test]
+    fn iss_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    iss: Some("issuer".to_string()),
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
+            .unwrap();
+
+        let pass = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                iss: Some("issuer".to_string()),
+                ..JwtClaims::default()
+            },
+        );
+
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                iss: Some("not-the-same".to_string()),
+                ..JwtClaims::default()
+            },
+        );
+
+        dbg!(&pass);
+        assert!(pass.is_ok());
+        assert!(fail.is_err());
+    }
+
+    #[test]
+    fn missing_iss_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    iss: None,
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                },
+            )
+            .unwrap();
+
+        let fail = jwt_service.decode_against_claims::<JwtTokenType, TestPayload>(
+            &token,
+            &JwtClaims {
+                iss: Some("issuer".to_string()),
+                ..JwtClaims::default()
+            },
+        );
+
+        assert!(fail.is_err());
     }
 }

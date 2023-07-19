@@ -14,11 +14,15 @@ pub enum JwtError {
     InvalidSignature,
     UsedBeforeNotBeforeClaim,
     UsedAfterExpireClaim,
+    MismatchedAudienceClaim,
+    MismatchedIssuerClaim,
     FailedToSerializeJson,
     FailedToDecodeBase64Url,
     FailedToReadStringAsUtf8,
     MissingNbfClaim,
     MissingExpClaim,
+    MissingAudClaim,
+    MissingIssClaim,
 
     // These values are not actually used within this crate, but are still available to make it a
     // bit easier when working with the error.
@@ -39,6 +43,12 @@ impl Display for JwtError {
             JwtError::InvalidSignature => "The signature is not valid",
             JwtError::UsedBeforeNotBeforeClaim => "Token was used before the 'not before' claim",
             JwtError::UsedAfterExpireClaim => "Token was used after the 'expire' claim",
+            JwtError::MismatchedAudienceClaim => {
+                "The given audience claim did not match the expected audience claim"
+            }
+            JwtError::MismatchedIssuerClaim => {
+                "The given issuer claim did not match the expected issuer claim"
+            }
             JwtError::FailedToSerializeJson => "Failed to serialize JSON payload",
             JwtError::FailedToDecodeBase64Url => "Failed to decode base64url encoded part of token",
             JwtError::FailedToReadStringAsUtf8 => "Failed to read token as UTF-8",
@@ -47,7 +57,9 @@ impl Display for JwtError {
             }
             JwtError::MissingToken => "Expected a JWT token, but none was provided",
             JwtError::MissingNbfClaim => "Missing nbf claim",
-            JwtError::MissingExpClaim => "Missing exp claim"
+            JwtError::MissingExpClaim => "Missing exp claim",
+            JwtError::MissingAudClaim => "Missing aud claim",
+            JwtError::MissingIssClaim => "Missing iss claim",
         };
 
         write!(f, "{}", slice)
@@ -57,7 +69,8 @@ impl Display for JwtError {
 impl std::error::Error for JwtError {}
 
 impl From<serde_json::Error> for JwtError {
-    fn from(_: serde_json::Error) -> Self {
+    fn from(i: serde_json::Error) -> Self {
+        dbg!(i);
         JwtError::FailedToSerializeJson
     }
 }
