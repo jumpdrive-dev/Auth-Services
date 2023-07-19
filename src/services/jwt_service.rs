@@ -666,7 +666,7 @@ mod tests {
             )
             .unwrap();
 
-        let pass = jwt_service.decode_against_claims::<JwtTokenType, TestPayload>(
+        let pass = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
             &token,
             &JwtClaims {
                 aud: Some("audience".to_string()),
@@ -674,7 +674,7 @@ mod tests {
             },
         );
 
-        let fail = jwt_service.decode_against_claims::<JwtTokenType, TestPayload>(
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
             &token,
             &JwtClaims {
                 aud: Some("not-the-same".to_string()),
@@ -732,7 +732,7 @@ mod tests {
             )
             .unwrap();
 
-        let pass = jwt_service.decode_against_claims::<JwtTokenType, TestPayload>(
+        let pass = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
             &token,
             &JwtClaims {
                 iss: Some("issuer".to_string()),
@@ -740,7 +740,7 @@ mod tests {
             },
         );
 
-        let fail = jwt_service.decode_against_claims::<JwtTokenType, TestPayload>(
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
             &token,
             &JwtClaims {
                 iss: Some("not-the-same".to_string()),
