@@ -1,10 +1,11 @@
 use std::ops::Add;
 
-use chrono::{Duration, Months, Utc};
 pub use rsa::pkcs1::DecodeRsaPrivateKey;
+pub use rsa::RsaPrivateKey;
+pub use chrono::Duration;
+use chrono::{Utc};
 use rsa::pkcs1v15::SigningKey;
 use rsa::signature::{SignatureEncoding, Signer};
-pub use rsa::RsaPrivateKey;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::Sha256;
@@ -18,7 +19,8 @@ use crate::models::jwt::jwt_token_type::JwtTokenType;
 /// Service with functions to generate and verify JWT tokens
 pub struct JwtService {
     signing_key: SigningKey<Sha256>,
-    access_token_seconds: u32,
+    access_token_duration: Duration,
+    refresh_token_duration: Duration,
     issuer: String,
     audience: String,
 }
@@ -28,20 +30,22 @@ type Result<T> = std::result::Result<T, JwtError>;
 impl JwtService {
     pub fn new(
         private_key: RsaPrivateKey,
-        access_token_seconds: u32,
+        access_token_duration: Duration,
+        refresh_token_duration: Duration,
         issuer: impl Into<String>,
         audience: impl Into<String>,
     ) -> Self {
         Self {
             signing_key: SigningKey::new(private_key),
-            access_token_seconds,
+            access_token_duration,
+            refresh_token_duration,
             issuer: issuer.into(),
             audience: audience.into(),
         }
     }
 
-    pub fn get_access_token_seconds(&self) -> u32 {
-        self.access_token_seconds
+    pub fn get_access_token_seconds(&self) -> i64 {
+        self.access_token_duration.num_seconds()
     }
 
     /// Creates a refresh token for the given grant and sets the [JwtHeader] and [JwtClaims]
@@ -60,7 +64,7 @@ impl JwtService {
             aud: Some(self.audience.to_string()),
             sub: Some(subject.into()),
             exp: Some(
-                (Utc::now().add(Duration::seconds(self.access_token_seconds as i64))).timestamp(),
+                (Utc::now().add(self.access_token_duration)).timestamp(),
             ),
             nbf: Some(Utc::now().timestamp()),
             iat: Some(Utc::now().timestamp()),
@@ -85,7 +89,7 @@ impl JwtService {
             iss: Some(self.issuer.to_string()),
             aud: Some(self.audience.to_string()),
             sub: Some(subject.into()),
-            exp: Some((Utc::now().add(Months::new(3))).timestamp()),
+            exp: Some((Utc::now().add(self.refresh_token_duration)).timestamp()),
             nbf: Some(Utc::now().timestamp()),
             iat: Some(Utc::now().timestamp()),
             jti: Some(Uuid::new_v4().to_string()),
@@ -412,6 +416,7 @@ mod tests {
 
     use crate::errors::JwtError;
     use crate::models::jwt::{JwtClaims, JwtHeader, JwtTokenType};
+    use crate::services::jwt_service::Duration;
     use crate::services::JwtService;
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -435,7 +440,8 @@ mod tests {
                 ],
             )
                 .unwrap(),
-            300,
+            Duration::seconds(300),
+            Duration::days(90),
             "tester",
             "internal-tests",
         )
