@@ -82,7 +82,7 @@ impl TotpService {
 
 #[cfg(feature = "test-utils")]
 impl TotpService {
-    /// Only available withing a test environment. Generates a 2FA code with the given secret key
+    /// Should only be used in a test environment. Generates a 2FA code with the given secret key
     /// and time step. To generate a code using the current time step, use
     /// [TotpService::test_generate_current_code].
     pub fn test_generate_code_with_step(
@@ -92,7 +92,7 @@ impl TotpService {
         Self::generate_code_with_step(secret_key, step)
     }
 
-    /// Only available within a test environment. Generates a 2FA code with the given secret key and
+    /// Should only be used in a test environment. Generates a 2FA code with the given secret key and
     /// uses the current time step. To generate a code with a specific time step, use
     /// [TotpService::test_generate_code_with_step].
     pub fn test_generate_current_code(secret_key: impl Into<String>) -> Result<String, TotpError> {
