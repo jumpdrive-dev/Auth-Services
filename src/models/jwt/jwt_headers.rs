@@ -16,6 +16,7 @@ pub struct JwtHeader<T = JwtTokenType> {
 
     /// This is usually used when using nested JWT tokens, but here it's used to differentiate
     /// between access tokens and refresh tokens.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cty: Option<T>,
 }
 
