@@ -20,6 +20,15 @@ pub struct JwtHeader<T = JwtTokenType> {
     pub cty: Option<T>,
 }
 
+impl<T> JwtHeader<T> {
+    pub fn with_cty(value: T) -> JwtHeader<T> {
+        JwtHeader {
+            cty: Some(value),
+            ..JwtHeader::default()
+        }
+    }
+}
+
 impl<T> Default for JwtHeader<T> {
     fn default() -> JwtHeader<T> {
         Self {
