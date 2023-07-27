@@ -351,7 +351,16 @@ impl JwtService {
         )
     }
 
-    /// Takes claims and compares the `iss`, `exp`, and `nbf` claims to the target claims.
+    /// Takes claims and compares the `iss`, `aud`, `exp`, `nbf`, and `jti` claims to the target claims.
+    /// The claims are checked as follows:
+    ///
+    /// * `iss` is checked by making sure it's the same as the `target_claims`
+    /// * `aud` is checked by making sure it's the same as the `target_claims`
+    /// * `jti` is checked by making sure it's the same as the `target_claims`
+    /// * `exp` is checked by making sure the timestamp is not after the value of the `exp` claim of
+    /// the `target_claims`
+    /// * `nbf` is checked by making sure the timestamp is not before the value of the `nbf` claims
+    /// of the `target_claims`
     pub fn guard_against_claims(
         &self,
         claims: &JwtClaims,
@@ -394,6 +403,16 @@ impl JwtService {
 
             if target_iss != iss {
                 return Err(JwtError::MismatchedIssuerClaim);
+            }
+        }
+
+        if let Some(target_jti) = &target_claims.jti {
+            let Some(jti) = &claims.jti else {
+                return Err(JwtError::MissingJtiClaim);
+            };
+
+            if target_jti != jti {
+                return Err(JwtError::MismatchedJWTIdClaim);
             }
         }
 
@@ -910,6 +929,71 @@ mod tests {
             &token,
             &JwtClaims {
                 exp: Some(11),
+                ..JwtClaims::default()
+            }
+        );
+
+        assert!(fail.is_err());
+    }
+
+    #[test]
+    fn jti_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    jti: Some("abc".to_string()),
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                }
+            )
+            .unwrap();
+
+        let pass = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                jti: Some("abc".to_string()),
+                ..JwtClaims::default()
+            }
+        );
+
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                jti: Some("def".to_string()),
+                ..JwtClaims::default()
+            }
+        );
+
+        assert!(pass.is_ok());
+        assert!(fail.is_err());
+    }
+
+    #[test]
+    fn missing_jti_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    jti: None,
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                }
+            )
+            .unwrap();
+
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                jti: Some("def".to_string()),
                 ..JwtClaims::default()
             }
         );

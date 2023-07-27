@@ -16,6 +16,7 @@ pub enum JwtError {
     UsedAfterExpireClaim,
     MismatchedAudienceClaim,
     MismatchedIssuerClaim,
+    MismatchedJWTIdClaim,
     FailedToSerializeJson,
     FailedToDecodeBase64Url,
     FailedToReadStringAsUtf8,
@@ -23,6 +24,7 @@ pub enum JwtError {
     MissingExpClaim,
     MissingAudClaim,
     MissingIssClaim,
+    MissingJtiClaim,
 
     // These values are not actually used within this crate, but are still available to make it a
     // bit easier when working with the error.
@@ -49,6 +51,7 @@ impl Display for JwtError {
             JwtError::MismatchedIssuerClaim => {
                 "The given issuer claim did not match the expected issuer claim"
             }
+            JwtError::MismatchedJWTIdClaim => "The given JWT ID claim did not match the expected JWT ID claim",
             JwtError::FailedToSerializeJson => "Failed to serialize JSON payload",
             JwtError::FailedToDecodeBase64Url => "Failed to decode base64url encoded part of token",
             JwtError::FailedToReadStringAsUtf8 => "Failed to read token as UTF-8",
@@ -60,6 +63,7 @@ impl Display for JwtError {
             JwtError::MissingExpClaim => "Missing exp claim",
             JwtError::MissingAudClaim => "Missing aud claim",
             JwtError::MissingIssClaim => "Missing iss claim",
+            JwtError::MissingJtiClaim => "Missing jti claim",
         };
 
         write!(f, "{}", slice)
