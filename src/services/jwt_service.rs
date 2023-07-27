@@ -786,4 +786,134 @@ mod tests {
 
         assert!(fail.is_err());
     }
+
+    #[test]
+    fn nbf_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    nbf: Some(10),
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                }
+            )
+            .unwrap();
+
+        let pass = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                nbf: Some(11),
+                ..JwtClaims::default()
+            }
+        );
+
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                nbf: Some(9),
+                ..JwtClaims::default()
+            }
+        );
+
+        assert!(pass.is_ok());
+        assert!(fail.is_err());
+    }
+
+    #[test]
+    fn missing_nbf_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    nbf: None,
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                }
+            )
+            .unwrap();
+
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                nbf: Some(9),
+                ..JwtClaims::default()
+            }
+        );
+
+        assert!(fail.is_err());
+    }
+
+    #[test]
+    fn exp_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    exp: Some(10),
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                }
+            )
+            .unwrap();
+
+        let pass = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                exp: Some(9),
+                ..JwtClaims::default()
+            }
+        );
+
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                exp: Some(11),
+                ..JwtClaims::default()
+            }
+        );
+
+        assert!(pass.is_ok());
+        assert!(fail.is_err());
+    }
+
+    #[test]
+    fn missing_exp_claim_is_checked_correctly() {
+        let jwt_service = create_jwt_service();
+
+        let token = jwt_service
+            .create_token::<_, JwtTokenType>(
+                JwtHeader::default(),
+                JwtClaims {
+                    exp: None,
+                    ..JwtClaims::default()
+                },
+                TestPayload {
+                    username: "Alice".to_string(),
+                }
+            )
+            .unwrap();
+
+        let fail = jwt_service.decode_against_claims::<TestPayload, JwtTokenType>(
+            &token,
+            &JwtClaims {
+                exp: Some(11),
+                ..JwtClaims::default()
+            }
+        );
+
+        assert!(fail.is_err());
+    }
 }
