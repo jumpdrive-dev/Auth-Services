@@ -70,7 +70,6 @@ impl std::error::Error for JwtError {}
 
 impl From<serde_json::Error> for JwtError {
     fn from(i: serde_json::Error) -> Self {
-        dbg!(i);
         JwtError::FailedToSerializeJson
     }
 }
