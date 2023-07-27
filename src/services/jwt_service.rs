@@ -362,7 +362,7 @@ impl JwtService {
                 return Err(JwtError::MissingNbfClaim);
             };
 
-            if nbf < target_nbf {
+            if target_nbf < nbf {
                 return Err(JwtError::UsedBeforeNotBeforeClaim);
             }
         }
