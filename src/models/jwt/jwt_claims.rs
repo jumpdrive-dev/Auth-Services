@@ -77,8 +77,8 @@ impl Default for JwtClaims {
             iss: None,
             sub: None,
             aud: None,
-            exp: Some(now_timestamp),
-            nbf: Some(now_timestamp),
+            exp: Some(now_timestamp + 5),
+            nbf: Some(now_timestamp - 5),
             iat: None,
             jti: None,
         }
