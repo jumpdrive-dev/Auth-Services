@@ -1,9 +1,9 @@
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Claims as defined in [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519). Should be included in
 /// the payload of a JWT token to add context and control to the token.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JwtClaims {
     /// From [RFC 7519 section 4.1.1](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.1):
     /// The "iss" (issuer) claim identifies the principal that issued the JWT. The processing of
@@ -79,8 +79,53 @@ impl Default for JwtClaims {
             aud: None,
             exp: Some(now_timestamp + 5),
             nbf: Some(now_timestamp + 5),
+            iat: Some(now_timestamp),
+            jti: None,
+        }
+    }
+}
+
+impl JwtClaims {
+    /// Creates empty claims without any default values.
+    pub fn new() -> Self {
+        JwtClaims {
+            iss: None,
+            sub: None,
+            aud: None,
+            exp: None,
+            nbf: None,
             iat: None,
             jti: None,
         }
+    }
+
+    pub fn with_issuer(mut self, issuer: impl Into<String>) -> Self {
+        self.iss = Some(issuer.into());
+        self
+    }
+
+    pub fn with_subject(mut self, subject: impl Into<String>) -> Self {
+        self.sub = Some(subject.into());
+        self
+    }
+
+    pub fn for_audience(mut self, audience: impl Into<String>) -> Self {
+        self.aud = Some(audience.into());
+        self
+    }
+
+    pub fn expire_in(mut self, duration: Duration) -> Self {
+        self.exp = Some(Utc::now().timestamp() + duration.num_seconds());
+        self
+    }
+
+    pub fn valid_after(mut self, duration: Duration) -> Self {
+        self.nbf = Some(Utc::now().timestamp() + duration.num_seconds());
+        self
+    }
+
+    pub fn with_jti(mut self, jti: impl Into<String>) -> Self {
+        self.jti = Some(jti.into());
+        self
     }
 }

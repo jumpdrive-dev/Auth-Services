@@ -73,7 +73,7 @@ impl Display for JwtError {
 impl std::error::Error for JwtError {}
 
 impl From<serde_json::Error> for JwtError {
-    fn from(i: serde_json::Error) -> Self {
+    fn from(_: serde_json::Error) -> Self {
         JwtError::FailedToSerializeJson
     }
 }
