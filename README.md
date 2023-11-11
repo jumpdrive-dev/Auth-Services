@@ -8,7 +8,7 @@ I currently have no intentions to publish this to crates.io, so for now if you w
 dependency using:
 
 ```toml
-jumpdrive-auth = { git = "https://github.com/Jumpdrive-dev/Auth-Services", tag = "2.3.0" }
+jumpdrive-auth = { git = "https://github.com/Jumpdrive-dev/Auth-Services", tag = "2.3.1" }
 ```
 
 ## Features
