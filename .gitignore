@@ -3,3 +3,4 @@ target
 *.key
 
 .env
+Cargo.lock
